@@ -1,6 +1,10 @@
 apiVersion: v2
 name: springboot-service
-description: A Helm chart for Kubernetes
+description: Base Helm chart for Spring Boot based services
+keywords:
+  - spring boot
+maintainers:
+  - name: Daniel Rodak
 
 # A chart can be either an 'application' or a 'library' chart.
 #
