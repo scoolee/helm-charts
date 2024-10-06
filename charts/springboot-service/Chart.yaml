@@ -5,6 +5,8 @@ keywords:
   - spring boot
 maintainers:
   - name: Daniel Rodak
+    email: drodak@notarealemail.org
+    url: https://github.com/drodak
 
 # A chart can be either an 'application' or a 'library' chart.
 #
