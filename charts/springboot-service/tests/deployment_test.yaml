@@ -1,0 +1,238 @@
+suite: test deployment
+set:
+  nameOverride: test-service
+  image:
+    repository: apache
+    tag: latest
+    pullPolicy: Always
+templates:
+  - templates/configmap.yaml
+  - templates/deployment.yaml
+chart:
+  version: 9.9.9+test
+  appVersion: 9.9.9
+tests:
+  - it: should render overriden values
+    set:
+      jvmOptions:
+        - -Xmx1024k
+    template: templates/deployment.yaml
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "test-service")].image
+          value: apache:latest
+      - notEqual:
+          path: spec.template.spec.containers[?(@.name == "test-service")].image
+          value: nginx:stable
+      - equal:
+          path: metadata.labels.chart
+          value: springboot-service-9.9.9_test
+      - equal:
+          path: metadata.labels.appVersion
+          value: 9.9.9
+      - matchRegex:
+          path: metadata.name
+          pattern: ^.*-test-service$
+      - notMatchRegex:
+          path: metadata.name
+          pattern: ^.*-foobar$
+      - contains:
+          path: spec.template.spec.containers[?(@.name == "test-service")].ports
+          content:
+            containerPort: 8080
+            name: http
+            protocol: TCP
+      - contains:
+          path: spec.template.spec.containers[?(@.name == "test-service")].ports
+          content:
+            containerPort: 9090
+            name: http-management
+            protocol: TCP
+      - notContains:
+          path: spec.template.spec.containers[?(@.name == "test-service")].ports
+          content:
+            containerPort: 80
+      - notExists:
+          path: spec.template.nodeSelector
+      - notExists:
+          path: spec.template.spec.containers[1]
+      - exists:
+          path: spec.template
+      - isNullOrEmpty:
+          path: spec.template.spec.containers[?(@.name == "test-service")].resources
+      - isNotNullOrEmpty:
+          path: spec.template.spec.containers[?(@.name == "test-service")]
+      - isKind:
+          of: Deployment
+      - isAPIVersion:
+          of: apps/v1
+      - hasDocuments:
+          count: 1
+      - matchSnapshot:
+          path: spec
+      - isType:
+          path: metadata.name
+          type: string
+      - lengthEqual:
+          path: spec.template.spec.containers
+          count: 1
+      - notLengthEqual:
+          path: spec.template.spec.containers
+          count: 10
+      - contains:
+          path: spec.template.spec.containers[?(@.name == "test-service")].env
+          content:
+            name: LOG4J_CONFIGURATION_FILE
+            value: /etc/config/app/logging.yaml
+      - contains:
+          path: spec.template.spec.containers[?(@.name == "test-service")].env
+          content:
+            name: JAVA_TOOL_OPTIONS
+            value: -Xmx1024k
+  - it: should render default probes
+    template: templates/deployment.yaml
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "test-service")].livenessProbe
+          value:
+            httpGet:
+              path: /actuator/health/liveness
+              port: "9090"
+            failureThreshold: 3
+            periodSeconds: 15
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "test-service")].readinessProbe
+          value:
+            httpGet:
+              path: /actuator/health/readiness
+              port: "9090"
+            failureThreshold: 10
+            periodSeconds: 15
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "test-service")].startupProbe
+          value:
+            httpGet:
+              path: /actuator/health/readiness
+              port: "9090"
+            failureThreshold: 10
+            initialDelaySeconds: 15
+            periodSeconds: 15
+  - it: should render custom probes
+    set:
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: http
+        failureThreshold: 5
+        periodSeconds: 10
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: http
+        failureThreshold: 6
+        periodSeconds: 11
+      startupProbe:
+        httpGet:
+          path: /health
+          port: http
+        failureThreshold: 7
+        initialDelaySeconds: 16
+        periodSeconds: 12
+    template: templates/deployment.yaml
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "test-service")].livenessProbe
+          value:
+            httpGet:
+              path: /health
+              port: http
+            failureThreshold: 5
+            periodSeconds: 10
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "test-service")].readinessProbe
+          value:
+            httpGet:
+              path: /health
+              port: http
+            failureThreshold: 6
+            periodSeconds: 11
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "test-service")].startupProbe
+          value:
+            httpGet:
+              path: /health
+              port: http
+            failureThreshold: 7
+            initialDelaySeconds: 16
+            periodSeconds: 12
+  - it: should pass greater or equal assertions
+    set:
+      resources:
+        requests:
+          memory: "64Mi"
+          cpu: 1.1
+        limits:
+          memory: "128Mi"
+          cpu: "1500m"
+    chart:
+      appVersion: 0.1.0
+    template: templates/deployment.yaml
+    documentIndex: 0
+    asserts:
+      - greaterOrEqual:
+          path: metadata.labels.appVersion
+          value: 2.0.0
+      - greaterOrEqual:
+          path: spec.template.spec.containers[?(@.name == "test-service")].resources.limits.cpu
+          value: "1540m"
+      - greaterOrEqual:
+          path: spec.template.spec.containers[?(@.name == "test-service")].resources.requests.cpu
+          value: 1.11
+      - greaterOrEqual:
+          path: spec.template.spec.containers[?(@.name == "test-service")].resources.requests.cpu
+          value: 1.1
+
+  - it: should pass less or equal assertions
+    set:
+      resources:
+        requests:
+          memory: "64Mi"
+          cpu: 1.1
+        limits:
+          memory: "128Mi"
+          cpu: "1500m"
+    chart:
+      appVersion: 10.0.0
+    template: templates/deployment.yaml
+    documentIndex: 0
+    asserts:
+      - lessOrEqual:
+          path: metadata.labels.appVersion
+          value: 10.0.0
+      - lessOrEqual:
+          path: spec.template.spec.containers[?(@.name == "test-service")].resources.limits.cpu
+          value: "1280m"
+      - lessOrEqual:
+          path: spec.template.spec.containers[?(@.name == "test-service")].resources.requests.cpu
+          value: 1.09
+      - lessOrEqual:
+          path: spec.template.spec.containers[?(@.name == "test-service")].resources.requests.cpu
+          value: 1.1
+      - notLessOrEqual:
+          path: spec.template.spec.containers[?(@.name == "test-service")].resources.requests.cpu
+          value: 1.2
+      - notGreaterOrEqual:
+          path: spec.template.spec.containers[?(@.name == "test-service")].resources.requests.cpu
+          value: 11.0
+      - notGreaterOrEqual:
+          path: spec.template.spec.containers[?(@.name == "test-service")].resources.requests.cpu
+          value: 0.1
+      - notGreaterOrEqual:
+          path: spec.template.spec.containers[?(@.name == "test-service")].resources.requests.memory
+          value: "1Mi"
+      - notGreaterOrEqual:
+          path: spec.template.spec.containers[?(@.name == "test-service")].resources.requests.memory
+          value: "101Mi"

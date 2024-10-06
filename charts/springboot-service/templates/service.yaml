@@ -1,0 +1,24 @@
+{{- if .Values.service.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "springboot-service.fullname" . }}
+  labels:
+  {{- include "springboot-service.labels" . | nindent 4 }}
+  {{- if .labels }}
+  {{- toYaml .labels | nindent 4 }}
+  {{- end }}    
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.httpPort }}
+      targetPort: http
+      protocol: TCP
+      name: http
+      {{- if and (eq "NodePort" .type) .Values.service.httpNodePort }}
+      nodePort: {{ .httpNodePort }}
+      {{- end }}
+  selector:
+    {{- include "springboot-service.selectorLabels" . | nindent 4 }}
+{{- end }}
