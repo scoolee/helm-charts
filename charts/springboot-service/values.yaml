@@ -11,7 +11,7 @@ image:
   # This sets the pull policy for images.
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "0.0.11"
+  tag: "0.0.12"
 
 # This is for the secretes for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
 imagePullSecrets: []
@@ -104,7 +104,18 @@ config:
           level: INFO
           AppenderRef:
             - ref: Console
-  application: {}
+  application: |-
+    management:
+      server:
+        port: 9090
+      endpoint:
+        health:
+          probes:
+            enabled: true
+          livenessState:
+            enabled: true
+          readinessState:
+            enabled: true
 
 # Entrypoint array. Not executed within a shell. The docker image's ENTRYPOINT is used if this is not provided.
 # The default entrypoint for jib generated docker image is `java -cp @/app/jib-classpath-file @/app/jib-main-class-file`
@@ -154,7 +165,7 @@ resources: {}
 livenessProbe:
   httpGet:
     path: /actuator/health/liveness
-    port: "{{ .Values.service.managementPort }}"
+    port: "http-management"
   failureThreshold: 3
   periodSeconds: 15
 
@@ -162,7 +173,7 @@ livenessProbe:
 readinessProbe:
   httpGet:
     path: /actuator/health/readiness
-    port: "{{ .Values.service.managementPort }}"
+    port: "http-management"
   failureThreshold: 10
   periodSeconds: 15
 
@@ -170,7 +181,7 @@ readinessProbe:
 startupProbe:
   httpGet:
     path: /actuator/health/readiness
-    port: "{{ .Values.service.managementPort }}"
+    port: "http-management"
   failureThreshold: 10
   initialDelaySeconds: 15
   periodSeconds: 15
