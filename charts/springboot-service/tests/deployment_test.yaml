@@ -99,7 +99,7 @@ tests:
           value:
             httpGet:
               path: /actuator/health/liveness
-              port: "9090"
+              port: http-management
             failureThreshold: 3
             periodSeconds: 15
       - equal:
@@ -107,7 +107,7 @@ tests:
           value:
             httpGet:
               path: /actuator/health/readiness
-              port: "9090"
+              port: http-management
             failureThreshold: 10
             periodSeconds: 15
       - equal:
@@ -115,7 +115,7 @@ tests:
           value:
             httpGet:
               path: /actuator/health/readiness
-              port: "9090"
+              port: http-management
             failureThreshold: 10
             initialDelaySeconds: 15
             periodSeconds: 15
