@@ -1,0 +1,149 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "springboot-service.fullname" . }}
+  labels:
+    app: {{ template "springboot-service.name" . }}
+    appVersion: {{ .Chart.AppVersion | quote }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}    
+    {{- include "springboot-service.labels" . | nindent 4 }}
+  {{- if .Values.annotations }}
+  annotations:
+    {{- toYaml .Values.annotations | nindent 4 }}
+  {{- end }}
+
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+
+  selector:
+    matchLabels:
+      {{- include "springboot-service.selectorLabels" . | nindent 6 }}
+
+  template:
+    metadata:
+      configChecksum: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "springboot-service.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "springboot-service.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+
+      containers:
+        - name: {{ include "springboot-service.name" . }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          {{- if .Values.command }}
+          command:
+            {{- toYaml .Values.command | nindent 12 }}
+          {{- end }}
+
+          {{- if .Values.args }}
+          args:
+            {{- toYaml .Values.args | nindent 12 }}
+          {{- end }}
+
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.containerHttpPort }}
+              protocol: TCP
+            - name: http-management
+              containerPort: {{ .Values.service.containerManagementPort }}
+              protocol: TCP
+
+          livenessProbe:
+            {{- if .Values.livenessProbe }}
+              {{- tpl (.Values.livenessProbe | toYaml) . | nindent 12 }}
+            {{- end }}
+
+          readinessProbe:
+            {{- if .Values.readinessProbe }}
+              {{- tpl (.Values.readinessProbe | toYaml) . | nindent 12 }}
+            {{- end }}
+
+          startupProbe:
+            {{- if .Values.startupProbe }}
+              {{- tpl (.Values.startupProbe | toYaml) . | nindent 12 }}
+            {{- end }}
+
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+
+          env:
+            - name: LOG4J_CONFIGURATION_FILE
+              value: /etc/config/app/logging.yaml
+            - name: JAVA_TOOL_OPTIONS
+              value: {{ join " " .Values.jvmOptions }}
+          {{- with .Values.extraEnv }}
+              {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+          {{- with .Values.envFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+          volumeMounts:
+            - name: logging
+              mountPath: /etc/config/app/logging.yaml
+              readOnly: true
+              subPath: logging.yaml
+            - name: application
+              mountPath: /etc/config/app/application.yaml
+              readOnly: true
+              subPath: application.yaml
+          {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+
+      volumes:
+        - name: logging
+          configMap:
+            name: {{ include "springboot-service.fullname" . }}
+            items:
+              - key: "logging.yaml"
+                path: logging.yaml
+        - name: application
+          configMap:
+            name: {{ include "springboot-service.fullname" . }}
+            items:
+              - key: "application.yaml"
+                path: application.yaml
+        {{- with .Values.extraVolumes }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
