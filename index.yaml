@@ -1,0 +1,20 @@
+apiVersion: v1
+entries:
+  springboot-service:
+  - apiVersion: v2
+    appVersion: 0.0.10
+    created: "2024-10-11T20:44:15.805598152Z"
+    description: Base Helm chart for Spring Boot based services
+    digest: c4a3f5ec603f0b8fd99889b85e11fc4d0d5325417862dc5188cf35a9631f6834
+    keywords:
+    - spring boot
+    maintainers:
+    - email: drodak@notarealemail.org
+      name: Daniel Rodak
+      url: https://github.com/drodak
+    name: springboot-service
+    type: application
+    urls:
+    - https://github.com/scoolee/helm-charts/releases/download/springboot-service-0.1.0/springboot-service-0.1.0.tgz
+    version: 0.1.0
+generated: "2024-10-11T20:44:15.805604223Z"
