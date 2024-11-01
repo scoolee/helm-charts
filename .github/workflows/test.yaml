@@ -6,8 +6,10 @@ jobs:
   unittest:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: d3adb5/helm-unittest-action@v2
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Helm unit tests
+        uses: d3adb5/helm-unittest-action@v2
 
   test:
     runs-on: ubuntu-latest
@@ -31,7 +33,7 @@ jobs:
       - name: Set up chart-testing
         uses: helm/chart-testing-action@v2.6.1
 
-      - name: Run chart-testing (list-changed)
+      - name: List changed charts
         id: list-changed
         run: |
           changed=$(ct list-changed --target-branch ${{ github.event.repository.default_branch }})
@@ -39,9 +41,9 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Run chart-testing (lint)
+      - name: Helm lint
         if: steps.list-changed.outputs.changed == 'true'
-        run: ct lint --target-branch ${{ github.event.repository.default_branch }} --validate-maintainers=false
+        run: ct lint --config .ct.yaml --target-branch ${{ github.event.repository.default_branch }} --validate-maintainers=false
 
       - name: Create kind cluster
         if: steps.list-changed.outputs.changed == 'true'
