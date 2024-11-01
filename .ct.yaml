@@ -1,2 +1,2 @@
 chart-repos:
-  companyinfo: https://charts.companyinfo.dev
+  - companyinfo=https://charts.companyinfo.dev
